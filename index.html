@@ -8,59 +8,94 @@
 </head>
 <body>
     <div class="container">
-        <div class="calculator">
-            <h1>Age Calculator<br><span> Using JavaScript</span></h1>
+        <div class="calculator" role="main" aria-labelledby="title">
+            <h1 id="title">Age Calculator<br><span> Using JavaScript</span></h1>
             <div class="input-box">
-                <input type="date" id="date">
-                <button onclick="calculateAge()">Calculate</button>
+                <label for="date" class="sr-only">Birth date</label>
+                <input type="date" id="date" aria-describedby="hint" required>
+                <button id="calculate-btn" type="button">Calculate</button>
             </div>
-            <p id="result"></p>
+            <p id="hint" class="hint">Pick your date of birth and press Calculate.</p>
+            <p id="result" aria-live="polite"></p>
+            <p id="next-birthday" class="next-birthday" aria-live="polite"></p>
         </div>
     </div>
 <script>
-let userInput = document.getElementById("date")
-    userInput.max = new Date().toISOString().split("T")[0];
-    let result = document.getElementById("result");
+const userInput = document.getElementById("date");
+const calculateBtn = document.getElementById("calculate-btn");
+const result = document.getElementById("result");
+const nextBirthday = document.getElementById("next-birthday");
 
-    function calculateAge() {
-        let birthDate = new Date(userInput.value);
+userInput.max = new Date().toISOString().split("T")[0];
 
-        let d1 = birthDate.getDate();
-        let m1 = birthDate.getMonth() + 1;
-        let y1 = birthDate.getFullYear();
+calculateBtn.addEventListener("click", calculateAge);
+userInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+        calculateAge();
+    }
+});
 
-        let today = new Date();
-
-        let d2 = today.getDate();
-        let m2 = today.getMonth() + 1;
-        let y2 = today.getFullYear();
-
-        let d3, m3, y3;
-
-        y3 = y2 - y1;
-
-        if(m2 >= m1){
-            m3 = m2 - m1;
-        }else{
-            y3--;
-            m3 = 12 + m2 - m1;
-        }
-        if(d2 >= d1){
-            d3 = d2 - d1;
-        }else{
-            m3--;
-            d3 = getDaysInMonth(y1, m1) + d2 - d1;
-        }
-        if (m3 < 0){
-            m3 = 11;
-            y3--;
-        }
-        result.innerHTML = `You are <span> ${y3} </span> years, <span> ${m3} </span> months and <span> ${d3} </span> days old `;
+function calculateAge() {
+    if (!userInput.value) {
+        result.textContent = "Please select your birth date.";
+        nextBirthday.textContent = "";
+        return;
     }
 
-    function getDaysInMonth (year, month){
-        return new Date(year, month, 0).getDate();
+    const birthDate = new Date(`${userInput.value}T00:00:00`);
+    const today = new Date();
+
+    if (Number.isNaN(birthDate.getTime()) || birthDate > today) {
+        result.textContent = "Please enter a valid date in the past.";
+        nextBirthday.textContent = "";
+        return;
     }
+
+    let years = today.getFullYear() - birthDate.getFullYear();
+    let months = today.getMonth() - birthDate.getMonth();
+    let days = today.getDate() - birthDate.getDate();
+
+    if (days < 0) {
+        months -= 1;
+        days += getDaysInMonth(today.getFullYear(), today.getMonth());
+    }
+
+    if (months < 0) {
+        years -= 1;
+        months += 12;
+    }
+
+    result.innerHTML = `You are <span>${years}</span> years, <span>${months}</span> months, and <span>${days}</span> days old.`;
+
+    const upcomingBirthday = getNextBirthday(birthDate, today);
+    const daysUntilBirthday = Math.ceil((upcomingBirthday - today) / (1000 * 60 * 60 * 24));
+    const birthdayLabel = upcomingBirthday.toLocaleDateString(undefined, {
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+    });
+
+    if (daysUntilBirthday === 0) {
+        nextBirthday.textContent = "🎉 Happy Birthday!";
+    } else {
+        nextBirthday.textContent = `Your next birthday is on ${birthdayLabel} (${daysUntilBirthday} day${daysUntilBirthday === 1 ? "" : "s"} away).`;
+    }
+}
+
+function getDaysInMonth(year, monthIndex) {
+    return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+function getNextBirthday(birthDate, today) {
+    const next = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+    next.setHours(0, 0, 0, 0);
+
+    if (next < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+        next.setFullYear(today.getFullYear() + 1);
+    }
+
+    return next;
+}
 </script>
 </body>
 </html>
